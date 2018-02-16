@@ -4,7 +4,7 @@ from hbmqtt.mqtt.constants import QOS_1, QOS_2
 import logging
 from neopixel import *
 import json
-from effects.base import Effect
+from effects.base import effect
 
 
 # LED strip configuration:
@@ -29,32 +29,33 @@ C = MQTTClient()
 
 
 async def mqtt_subscriber(loop, log):
-    await C.connect('mqtt://192.168.4.2/')
-    await C.subscribe([
-            ('/woodie/ws281x/set', QOS_1),
-         ])
-    try:
-        while True:
-            message = await C.deliver_message()
-            packet = message.publish_packet
-            topic = packet.variable_header.topic_name
-            msg = str(packet.payload.data)
+    while True:
+        try:
+            await C.connect('mqtt://192.168.4.2/')
+            await C.subscribe([
+                    ('/woodie/ws281x/set', QOS_1),
+                 ])
+            while True:
+                message = await C.deliver_message()
+                packet = message.publish_packet
+                topic = packet.variable_header.topic_name
+                msg = packet.payload.data.decode("utf-8")
 
-            print("%s => %s" % topic, msg)
+                print("t:" + topic + " m:" + msg)
 
-            command_string = msg.topic.split('/')
-            msg_dict = json.loads(msg.payload.decode("utf-8"))
-            log.info("Received Message: " + str(msg.payload))
-            if command_string[3] == 'set':
-                if 'effect' not in msg_dict or msg_dict['effect'] == 'None':
-                    loop.create_task(Effect(strip=_strip, log=log, topic=topic, message=msg_dict, broker=C))
-                else:
-                    log.error("Effect '" + str(msg.payload) + "' is unknown!")
+                command_string = topic.split('/')
+                msg_dict = json.loads(msg)
+                log.info("Received Message: " + str(msg))
+                if command_string[3] == 'set':
+                    if 'effect' not in msg_dict or msg_dict['effect'] == 'None':
+                        loop.create_task(effect(strip=_strip, log=log, topic=topic, message=msg_dict, broker=C))
+                    else:
+                        log.error("Effect '" + str(msg) + "' is unknown!")
 
-        await C.unsubscribe(['$SYS/broker/uptime', '$SYS/broker/load/#'])
-        await C.disconnect()
-    except ClientException as ce:
-        log.error("Client exception: %s" % ce)
+            await C.unsubscribe(['/woodie/ws281x/set'])
+            await C.disconnect()
+        except ClientException as ce:
+            log.error("Client exception: %s" % ce)
 
 
 if __name__ == '__main__':

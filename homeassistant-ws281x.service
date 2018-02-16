@@ -1,0 +1,19 @@
+[Unit]
+Description=WS281x MQTT Client
+After=syslog.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+WorkingDirectory=/usr/local/sbin/homeassistant-ws281x-control/
+ExecStart=/usr/local/sbin/homeassistant-ws281x-control/homeassistant-ws281x-control.py
+EnvironmentFile=/etc/homeassistant-ws281x-control
+SyslogIdentifier=homeassistant-ws281x-control
+StandardOutput=syslog
+StandardError=syslog
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
