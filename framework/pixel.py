@@ -1,13 +1,10 @@
-from neopixel import *
-
-
 class Pixel:
     @staticmethod
     def _dimmer(i, brightness=255):
         factor = brightness / float(255)
         return int(int(pow(i * factor, 2)) / float(255))
 
-    def __init__(self, pos=1, r=0, g=0, b=0, brightness=255):
+    def __init__(self, r=0, g=0, b=0, brightness=255):
         self.r = r
         self.g = g
         self.b = b
@@ -15,10 +12,6 @@ class Pixel:
         self._r = self._dimmer(i=r, brightness=brightness)
         self._g = self._dimmer(i=g, brightness=brightness)
         self._b = self._dimmer(i=b, brightness=brightness)
-        self._pos = pos
-
-    def set_pixel(self, strip):
-        strip.setPixelColor(self._pos, Color(self._r, self._b, self._g))
 
     def get_brightness(self):
         return self.brightness

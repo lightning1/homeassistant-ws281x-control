@@ -11,7 +11,7 @@ class Effect:
         self._iterations = 0
 
     def finished(self):
-        return self._iterations <= 0
+        return self._iterations < 0
 
-    def run(self, pixels):
+    def run(self, strip):
         self._iterations = self._iterations - 1
