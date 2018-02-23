@@ -7,6 +7,7 @@ from time import sleep
 from effects.ColorWipe import ColorWipe
 from effects.OneColor import OneColor
 from effects.Turntable import Turntable
+from effects.Rainbow import Rainbow
 from framework.strip import Strip
 import traceback
 import colorsys
@@ -70,6 +71,7 @@ class StripeLoop(Thread):
                         if msg_dict['state'] == 'OFF':
                             self._effects.clear()
                             self._strip.off()
+                            msg_dict['effect'] = 'none'
 
                         if 'effect' not in msg_dict:
                             if last_state is not None and 'effect' in last_state:
@@ -97,8 +99,8 @@ class StripeLoop(Thread):
                                                           b=msg_dict['color']['b'] / float(255))
                                 hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                                 self._effects.append(ColorWipe(pixel_max=self._strip.get_size(),
-                                                              strip=self._strip,
-                                                              hsv=hsv))
+                                                               strip=self._strip,
+                                                               hsv=hsv))
                             elif msg_dict['effect'] == 'turntable':
                                 self._effects.clear()
                                 journal.send(MESSAGE="Applying effect Turntable")
@@ -107,8 +109,18 @@ class StripeLoop(Thread):
                                                           b=msg_dict['color']['b'] / float(255))
                                 hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                                 self._effects.append(Turntable(pixel_max=self._strip.get_size(),
-                                                          strip=self._strip,
-                                                          hsv=hsv))
+                                                               strip=self._strip,
+                                                               hsv=hsv))
+                            elif msg_dict['effect'] == 'rainbow':
+                                self._effects.clear()
+                                journal.send(MESSAGE="Applying effect Rainbow")
+                                hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                          g=msg_dict['color']['g'] / float(255),
+                                                          b=msg_dict['color']['b'] / float(255))
+                                hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
+                                self._effects.append(Rainbow(pixel_max=self._strip.get_size(),
+                                                             strip=self._strip,
+                                                             hsv=hsv))
                             else:
                                 journal.send(MESSAGE="[warning] Unknown effect received")
 
