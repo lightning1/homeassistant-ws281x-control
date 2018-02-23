@@ -1,5 +1,6 @@
 from systemd import journal
 from neopixel import *
+import colorsys
 
 
 # LED strip configuration:
@@ -56,7 +57,8 @@ class Strip:
 
     def loop(self):
         for position, pixel in self._pixels.items():
-            self._strip.setPixelColor(position, Color(pixel._r, pixel._b, pixel._g))
+            rgb = colorsys.hsv_to_rgb(h=pixel[0], s=pixel[1], v=pixel[2])
+            self._strip.setPixelColor(position, Color(int(rgb[0]*255), int(rgb[2]*255), int(rgb[1]*255)))
         self._strip.show()
         #journal.send(MESSAGE="[loop] Got " + str(len(self._pixels)) + " pixels configured")
 

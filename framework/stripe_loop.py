@@ -9,6 +9,7 @@ from effects.OneColor import OneColor
 from effects.Turntable import Turntable
 from framework.strip import Strip
 import traceback
+import colorsys
 
 
 class StripeLoop(Thread):
@@ -71,39 +72,43 @@ class StripeLoop(Thread):
                             self._strip.off()
 
                         if 'effect' not in msg_dict:
-                            if 'effect' in last_state:
+                            if last_state is not None and 'effect' in last_state:
                                 msg_dict['effect'] = last_state['effect']
 
                         if ('effect' not in msg_dict or msg_dict['effect'] == 'none' or msg_dict['effect'] == 'None')\
                                 and msg_dict['state'] != 'OFF':
                             self._effects.clear()
                             journal.send(MESSAGE="Applying effect OneColor")
+                            hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                      g=msg_dict['color']['g'] / float(255),
+                                                      b=msg_dict['color']['b'] / float(255))
+                            hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                             self._effects.append(OneColor(pixel_max=self._strip.get_size(),
                                                           strip=self._strip,
-                                                          r=msg_dict['color']['r'],
-                                                          g=msg_dict['color']['g'],
-                                                          b=msg_dict['color']['b'],
-                                                          brightness=msg_dict['brightness']))
+                                                          hsv=hsv))
                             msg_dict['effect'] = 'none'
                         elif 'effect' in msg_dict:
                             if msg_dict['effect'] == 'colorwipe':
                                 self._effects.clear()
                                 journal.send(MESSAGE="Applying effect ColorWipe")
+
+                                hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                          g=msg_dict['color']['g'] / float(255),
+                                                          b=msg_dict['color']['b'] / float(255))
+                                hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                                 self._effects.append(ColorWipe(pixel_max=self._strip.get_size(),
-                                                               strip=self._strip,
-                                                               r=msg_dict['color']['r'],
-                                                               g=msg_dict['color']['g'],
-                                                               b=msg_dict['color']['b'],
-                                                               brightness=msg_dict['brightness']))
+                                                              strip=self._strip,
+                                                              hsv=hsv))
                             elif msg_dict['effect'] == 'turntable':
                                 self._effects.clear()
                                 journal.send(MESSAGE="Applying effect Turntable")
+                                hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                          g=msg_dict['color']['g'] / float(255),
+                                                          b=msg_dict['color']['b'] / float(255))
+                                hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                                 self._effects.append(Turntable(pixel_max=self._strip.get_size(),
-                                                               strip=self._strip,
-                                                               r=msg_dict['color']['r'],
-                                                               g=msg_dict['color']['g'],
-                                                               b=msg_dict['color']['b'],
-                                                               brightness=msg_dict['brightness']))
+                                                          strip=self._strip,
+                                                          hsv=hsv))
                             else:
                                 journal.send(MESSAGE="[warning] Unknown effect received")
 
