@@ -1,10 +1,9 @@
 from effects.Effect import Effect
-from framework.pixel import Pixel
 
 
 class ColorWipe(Effect):
-    def __init__(self, pixel_max, strip, pixel_min=0, sleep=20, r=0, g=0, b=0, brightness=255):
-        Effect.__init__(self, pixel_max=pixel_max, pixel_min=pixel_min, sleep=sleep, r=r, g=g, b=b, brightness=brightness)
+    def __init__(self, pixel_max, strip, pixel_min=0, sleep=20, hsv=(0, 0, 0)):
+        Effect.__init__(self, pixel_max=pixel_max, pixel_min=pixel_min, sleep=sleep, hsv=hsv)
         self._iterations = (pixel_max-pixel_min)*2
         strip.off()
 
@@ -12,7 +11,7 @@ class ColorWipe(Effect):
         if self._iterations > (self.pixel_max-self.pixel_min):
             position = (self.pixel_max-self.pixel_min)*2 - self._iterations
             # growing
-            new_pixel = Pixel(r=self.r, g=self.g, b=self.b, brightness=self.brightness)
+            new_pixel = self.hsv
             strip.add(position=position, pixel=new_pixel)
         elif self._iterations <= (self.pixel_max-self.pixel_min):
             # shrinking
