@@ -70,7 +70,12 @@ class StripeLoop(Thread):
                             self._effects.clear()
                             self._strip.off()
 
-                        if ('effect' not in msg_dict or msg_dict['effect'] == 'none') and msg_dict['state'] != 'OFF':
+                        if 'effect' not in msg_dict:
+                            if 'effect' in last_state:
+                                msg_dict['effect'] = last_state['effect']
+
+                        if ('effect' not in msg_dict or msg_dict['effect'] == 'none' or msg_dict['effect'] == 'None')\
+                                and msg_dict['state'] != 'OFF':
                             self._effects.clear()
                             journal.send(MESSAGE="Applying effect OneColor")
                             self._effects.append(OneColor(pixel_max=self._strip.get_size(),
