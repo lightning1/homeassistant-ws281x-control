@@ -43,7 +43,22 @@ class StripeLoop(Thread):
                                 global_speed = global_speed + 10
                             elif msg_dict['command'] == 'mode_speed_up' and global_speed > 0:
                                 global_speed = global_speed - 10
+                            elif msg_dict['command'] == 'white_mode':
+                                msg_dict.pop('hue', True)
+                                msg_dict['color'] = {}
+                                msg_dict['color']['r'] = 255
+                                msg_dict['color']['g'] = 255
+                                msg_dict['color']['b'] = 255
                             restart_effect = True
+                        if 'mode' in msg_dict:
+                            if 'effect' not in last_state or last_state['effect'].lower() == 'none':
+                                msg_dict['effect'] = 'colorwipe'
+                            elif last_state['effect'] == 'colorwipe':
+                                msg_dict['effect'] = 'turntable'
+                            elif last_state['effect'] == 'turntable':
+                                msg_dict['effect'] = 'rainbow'
+                            elif last_state['effect'] == 'rainbow':
+                                msg_dict['effect'] = 'colorwipe'
 
                         # normal one-color operation
                         if self._last_state is not None:
@@ -147,7 +162,7 @@ class StripeLoop(Thread):
                                 self._effects.append(Rainbow(pixel_max=self._strip.get_size(),
                                                              strip=self._strip,
                                                              hsv=hsv,
-                                                             speed=global_speed))
+                                                             sleep=global_speed))
                             else:
                                 journal.send(MESSAGE="[warning] Unknown effect received")
 
