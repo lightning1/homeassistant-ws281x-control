@@ -1,7 +1,7 @@
 from effects.Effect import Effect
 
 
-class ColorWipe(Effect):
+class Colorwipe(Effect):
     def __init__(self, pixel_max, strip, pixel_min=0, sleep=20, hsv=(0, 0, 0)):
         Effect.__init__(self, pixel_max=pixel_max, pixel_min=pixel_min, sleep=sleep, hsv=hsv)
         self._iterations = (pixel_max-pixel_min)*2
