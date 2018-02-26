@@ -1,1 +1,1 @@
-__all__ = ["Effect", "Colorwipe", "Onecolor", "Rainbow", "Turntable"]
+__all__ = ["Effect", "Colorwipe", "Onecolor", "Rainbow", "Turntable", "Testcolor.py"]
