@@ -1,16 +1,25 @@
 import json
-from hbmqtt.mqtt.constants import QOS_1, QOS_2, QOS_0
 from threading import Thread
 from systemd import journal
 from queue import Empty
 from time import sleep
-from effects.ColorWipe import ColorWipe
-from effects.OneColor import OneColor
-from effects.Turntable import Turntable
-from effects.Rainbow import Rainbow
+from effects import *
+from effects.Effect import Effect
 from framework.strip import Strip
 import traceback
 import colorsys
+
+
+def construct_effect(effect_name, **kwargs):
+    journal.send(MESSAGE="Get " + effect_name + " from " + str(get_effect_names()))
+    for effect in Effect.__subclasses__():
+        if effect.__name__ == effect_name:
+            return effect(**kwargs)
+    return None
+
+
+def get_effect_names():
+    return [cls.__name__ for cls in Effect.__subclasses__()]
 
 
 class StripeLoop(Thread):
@@ -23,6 +32,7 @@ class StripeLoop(Thread):
         self._strip = Strip()
         self._effects = []
         self._last_state = None
+        journal.send(MESSAGE="Found Effects: " + str(get_effect_names()))
         journal.send(MESSAGE="Setting up LED-Thread")
 
     def run(self):
@@ -107,8 +117,15 @@ class StripeLoop(Thread):
 
                         if ('effect' not in msg_dict or msg_dict['effect'].lower() == 'none')\
                                 and ('state' not in msg_dict or msg_dict['state'].lower() != 'off'):
+                            msg_dict['effect'] = 'none'
+
+                        if msg_dict['effect'].lower() == 'none' or msg_dict['effect'].capitalize() in get_effect_names():
                             self._effects.clear()
-                            journal.send(MESSAGE="Applying effect OneColor")
+                            if msg_dict['effect'].lower() == 'none':
+                                effect_class = 'Onecolor'
+                            else:
+                                effect_class = msg_dict['effect'].capitalize()
+                            journal.send(MESSAGE="Applying effect " + str(effect_class))
                             if 'hue' in msg_dict:
                                 hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
                             else:
@@ -116,55 +133,14 @@ class StripeLoop(Thread):
                                                           g=msg_dict['color']['g'] / float(255),
                                                           b=msg_dict['color']['b'] / float(255))
                                 hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
-                            self._effects.append(OneColor(pixel_max=self._strip.get_size(),
-                                                          strip=self._strip,
-                                                          hsv=hsv))
+                            self._effects.append(construct_effect(effect_name=effect_class,
+                                                                  pixel_max=self._strip.get_size(),
+                                                                  strip=self._strip,
+                                                                  hsv=hsv,
+                                                                  sleep=global_speed))
                             msg_dict['effect'] = 'none'
-                        elif 'effect' in msg_dict:
-                            if msg_dict['effect'].lower() == 'colorwipe':
-                                self._effects.clear()
-                                journal.send(MESSAGE="Applying effect ColorWipe")
-                                if 'hue' in msg_dict:
-                                    hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
-                                else:
-                                    hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
-                                                              g=msg_dict['color']['g'] / float(255),
-                                                              b=msg_dict['color']['b'] / float(255))
-                                hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
-                                self._effects.append(ColorWipe(pixel_max=self._strip.get_size(),
-                                                               strip=self._strip,
-                                                               hsv=hsv,
-                                                               sleep=global_speed))
-                            elif msg_dict['effect'].lower() == 'turntable':
-                                self._effects.clear()
-                                journal.send(MESSAGE="Applying effect Turntable")
-                                if 'hue' in msg_dict:
-                                    hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
-                                else:
-                                    hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
-                                                              g=msg_dict['color']['g'] / float(255),
-                                                              b=msg_dict['color']['b'] / float(255))
-                                hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
-                                self._effects.append(Turntable(pixel_max=self._strip.get_size(),
-                                                               strip=self._strip,
-                                                               hsv=hsv,
-                                                               sleep=global_speed))
-                            elif msg_dict['effect'].lower() == 'rainbow':
-                                self._effects.clear()
-                                journal.send(MESSAGE="Applying effect Rainbow")
-                                if 'hue' in msg_dict:
-                                    hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
-                                else:
-                                    hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
-                                                              g=msg_dict['color']['g'] / float(255),
-                                                              b=msg_dict['color']['b'] / float(255))
-                                hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
-                                self._effects.append(Rainbow(pixel_max=self._strip.get_size(),
-                                                             strip=self._strip,
-                                                             hsv=hsv,
-                                                             sleep=global_speed))
-                            else:
-                                journal.send(MESSAGE="[warning] Unknown effect received")
+                        else:
+                            journal.send(MESSAGE="[warning] Unknown effect '" + str(msg_dict['effect']) + "' received")
 
                         if last_state is None or last_state != msg_dict:
                             send_dict = msg_dict
