@@ -26,14 +26,24 @@ class StripeLoop(Thread):
         journal.send(MESSAGE="Setting up LED-Thread")
 
     def run(self):
+        global_speed = 50
         while True:
             try:
                 try:
+                    restart_effect = False
                     message = self._receive_queue.get(block=False)
                     if message is not None:
                         journal.send(MESSAGE="[begin] Effects active: " + str(len(self._effects)))
                         journal.send(MESSAGE="Process broker message")
                         msg_dict = json.loads(message.decode("utf-8"))
+
+                        # do custom command stuff (if Milight Remote is used)
+                        if 'command' in msg_dict:
+                            if msg_dict['command'] == 'mode_speed_down' and global_speed < 150:
+                                global_speed = global_speed + 10
+                            elif msg_dict['command'] == 'mode_speed_up' and global_speed > 0:
+                                global_speed = global_speed - 10
+                            restart_effect = True
 
                         # normal one-color operation
                         if self._last_state is not None:
@@ -99,34 +109,45 @@ class StripeLoop(Thread):
                             if msg_dict['effect'].lower() == 'colorwipe':
                                 self._effects.clear()
                                 journal.send(MESSAGE="Applying effect ColorWipe")
-
-                                hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
-                                                          g=msg_dict['color']['g'] / float(255),
-                                                          b=msg_dict['color']['b'] / float(255))
+                                if 'hue' in msg_dict:
+                                    hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
+                                else:
+                                    hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                              g=msg_dict['color']['g'] / float(255),
+                                                              b=msg_dict['color']['b'] / float(255))
                                 hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                                 self._effects.append(ColorWipe(pixel_max=self._strip.get_size(),
                                                                strip=self._strip,
-                                                               hsv=hsv))
+                                                               hsv=hsv,
+                                                               sleep=global_speed))
                             elif msg_dict['effect'].lower() == 'turntable':
                                 self._effects.clear()
                                 journal.send(MESSAGE="Applying effect Turntable")
-                                hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
-                                                          g=msg_dict['color']['g'] / float(255),
-                                                          b=msg_dict['color']['b'] / float(255))
+                                if 'hue' in msg_dict:
+                                    hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
+                                else:
+                                    hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                              g=msg_dict['color']['g'] / float(255),
+                                                              b=msg_dict['color']['b'] / float(255))
                                 hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                                 self._effects.append(Turntable(pixel_max=self._strip.get_size(),
                                                                strip=self._strip,
-                                                               hsv=hsv))
+                                                               hsv=hsv,
+                                                               sleep=global_speed))
                             elif msg_dict['effect'].lower() == 'rainbow':
                                 self._effects.clear()
                                 journal.send(MESSAGE="Applying effect Rainbow")
-                                hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
-                                                          g=msg_dict['color']['g'] / float(255),
-                                                          b=msg_dict['color']['b'] / float(255))
+                                if 'hue' in msg_dict:
+                                    hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
+                                else:
+                                    hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                              g=msg_dict['color']['g'] / float(255),
+                                                              b=msg_dict['color']['b'] / float(255))
                                 hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
                                 self._effects.append(Rainbow(pixel_max=self._strip.get_size(),
                                                              strip=self._strip,
-                                                             hsv=hsv))
+                                                             hsv=hsv,
+                                                             speed=global_speed))
                             else:
                                 journal.send(MESSAGE="[warning] Unknown effect received")
 
