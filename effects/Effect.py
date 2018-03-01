@@ -12,3 +12,7 @@ class Effect:
 
     def run(self, strip):
         self._iterations = self._iterations - 1
+
+    def update(self, sleep=20, hsv=(0, 0, 0)):
+        self.hsv = hsv
+        self.sleep = sleep

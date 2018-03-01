@@ -10,6 +10,19 @@ import traceback
 import colorsys
 
 
+def get_discovery():
+    msg = {}
+    msg['name'] = "Atrium"
+    msg['command_topic'] = "/woodie/ws281x/set"
+    msg['state_topic'] = "/woodie/ws281x/get"
+    msg['rgb'] = True
+    msg['brightness'] = True
+    msg['effect'] = True
+    msg['retain'] = True
+    msg['effects'] = get_effect_names()
+    return msg
+
+
 def construct_effect(effect_name, **kwargs):
     journal.send(MESSAGE="Get " + effect_name + " from " + str(get_effect_names()))
     for effect in Effect.__subclasses__():
@@ -33,7 +46,10 @@ class StripeLoop(Thread):
         self._effects = []
         self._last_state = None
         journal.send(MESSAGE="Found Effects: " + str(get_effect_names()))
+        journal.send(MESSAGE="Setting up auto discovery")
+        send_queue.append(get_discovery())
         journal.send(MESSAGE="Setting up LED-Thread")
+
 
     def run(self):
         global_speed = 50
@@ -63,13 +79,9 @@ class StripeLoop(Thread):
                         if 'mode' in msg_dict:
                             if 'effect' not in last_state or last_state['effect'].lower() == 'none':
                                 msg_dict['effect'] = 'colorwipe'
-                            elif last_state['effect'] == 'colorwipe':
-                                msg_dict['effect'] = 'turntable'
-                            elif last_state['effect'] == 'turntable':
-                                msg_dict['effect'] = 'rainbow'
-                            elif last_state['effect'] == 'rainbow':
-                                msg_dict['effect'] = 'colorwipe'
-
+                            else:
+                                msg_dict['effect'] = get_effect_names()[
+                                    (get_effect_names().index(last_state['effect']) + 1) % len(get_effect_names())]
                         # normal one-color operation
                         if self._last_state is not None:
                             last_state = self._last_state
