@@ -13,6 +13,8 @@ LED_BRIGHTNESS = 255     # Set to 0 for darkest and 255 for brightest
 LED_INVERT     = False   # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL    = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
 LED_STRIP      = ws.WS2811_STRIP_GRB   # Strip type and colour ordering
+LED_CORRECTION = 2    # Some Stripes illuminate on lower RGB values than others.
+LED_THRESHOLD = 0.02
 
 
 class Strip:
@@ -57,8 +59,13 @@ class Strip:
 
     def loop(self):
         for position, pixel in self._pixels.items():
-            rgb = colorsys.hsv_to_rgb(h=pixel[0], s=pixel[1], v=pixel[2])
-            self._strip.setPixelColor(position, Color(int(rgb[0]*255), int(rgb[2]*255), int(rgb[1]*255)))
+            if any([position < 100,  position > 183]) and pixel[2] < LED_THRESHOLD:
+                rgb = colorsys.hsv_to_rgb(h=pixel[0], s=pixel[1], v=pixel[2]*LED_CORRECTION)
+                self._strip.setPixelColor(position, Color(int(rgb[0] * 255 + 1), int(rgb[2] * 255 + 1), int(rgb[1] * 255 + 1)))
+            else:
+                rgb = colorsys.hsv_to_rgb(h=pixel[0], s=pixel[1], v=pixel[2])
+                self._strip.setPixelColor(position, Color(int(rgb[0] * 255), int(rgb[2] * 255), int(rgb[1] * 255)))
+
         self._strip.show()
         #journal.send(MESSAGE="[loop] Got " + str(len(self._pixels)) + " pixels configured")
 
