@@ -1,1 +1,1 @@
-__all__ = ["Effect", "Colorwipe", "Onecolor", "Rainbow", "Turntable", "Testcolor"]
+__all__ = ["Effect", "Colorwipe", "Onecolor", "Rainbow", "Turntable", "Colorshoot", "Testcolor"]

@@ -10,6 +10,19 @@ import traceback
 import colorsys
 
 
+def get_discovery():
+    msg = {}
+    msg['name'] = "Atrium"
+    msg['command_topic'] = "/woodie/ws281x/set"
+    msg['state_topic'] = "/woodie/ws281x/get"
+    msg['rgb'] = True
+    msg['brightness'] = True
+    msg['effect'] = True
+    msg['retain'] = True
+    msg['effects'] = get_effect_names()
+    return msg
+
+
 def construct_effect(effect_name, **kwargs):
     journal.send(MESSAGE="Get " + effect_name + " from " + str(get_effect_names()))
     for effect in Effect.__subclasses__():
@@ -33,6 +46,8 @@ class StripeLoop(Thread):
         self._effects = []
         self._last_state = None
         journal.send(MESSAGE="Found Effects: " + str(get_effect_names()))
+        #journal.send(MESSAGE="Setting up auto discovery")
+        #send_queue.put(get_discovery())
         journal.send(MESSAGE="Setting up LED-Thread")
 
     def run(self):
@@ -47,30 +62,6 @@ class StripeLoop(Thread):
                         journal.send(MESSAGE="Process broker message")
                         msg_dict = json.loads(message.decode("utf-8"))
 
-                        # do custom command stuff (if Milight Remote is used)
-                        if 'command' in msg_dict:
-                            if msg_dict['command'] == 'mode_speed_down' and global_speed < 150:
-                                global_speed = global_speed + 10
-                            elif msg_dict['command'] == 'mode_speed_up' and global_speed > 0:
-                                global_speed = global_speed - 10
-                            elif msg_dict['command'] == 'white_mode':
-                                msg_dict.pop('hue', True)
-                                msg_dict['color'] = {}
-                                msg_dict['color']['r'] = 255
-                                msg_dict['color']['g'] = 255
-                                msg_dict['color']['b'] = 255
-                            restart_effect = True
-                        if 'mode' in msg_dict:
-                            if 'effect' not in last_state or last_state['effect'].lower() == 'none':
-                                msg_dict['effect'] = 'colorwipe'
-                            elif last_state['effect'] == 'colorwipe':
-                                msg_dict['effect'] = 'turntable'
-                            elif last_state['effect'] == 'turntable':
-                                msg_dict['effect'] = 'rainbow'
-                            elif last_state['effect'] == 'rainbow':
-                                msg_dict['effect'] = 'colorwipe'
-
-                        # normal one-color operation
                         if self._last_state is not None:
                             last_state = self._last_state
                             journal.send(MESSAGE="Applied last state: " + str(last_state))
@@ -78,69 +69,89 @@ class StripeLoop(Thread):
                             journal.send(MESSAGE="No last state found")
                             last_state = None
 
-                        if 'brightness' not in msg_dict:
-                            if last_state is not None and 'brightness' in last_state:
-                                msg_dict['brightness'] = int(last_state['brightness'])
-                            else:
-                                msg_dict['brightness'] = 128
-                        else:
-                            msg_dict['brightness'] = int(msg_dict['brightness'])
-
-                        if 'color' not in msg_dict and 'hue' not in msg_dict:
-                            if last_state is not None:
-                                if 'color' in last_state:
-                                    msg_dict['color'] = {}
-                                    msg_dict['color']['r'] = last_state['color']['r']
-                                    msg_dict['color']['g'] = last_state['color']['g']
-                                    msg_dict['color']['b'] = last_state['color']['b']
-                                else:
-                                    msg_dict['hue'] = last_state['hue']
-                            else:
-                                msg_dict['color'] = {}
-                                msg_dict['color']['r'] = 255
-                                msg_dict['color']['g'] = 255
-                                msg_dict['color']['b'] = 255
-
-                        if 'transition' in msg_dict:
-                            transition = int(msg_dict['transition'])
-                        else:
-                            transition = None
-
                         if 'state' in msg_dict and msg_dict['state'].lower() == 'off':
                             self._effects.clear()
                             self._strip.off()
                             msg_dict['effect'] = 'none'
-
-                        if 'effect' not in msg_dict:
-                            if last_state is not None and 'effect' in last_state:
-                                msg_dict['effect'] = last_state['effect']
-
-                        if ('effect' not in msg_dict or msg_dict['effect'].lower() == 'none')\
-                                and ('state' not in msg_dict or msg_dict['state'].lower() != 'off'):
-                            msg_dict['effect'] = 'none'
-
-                        if msg_dict['effect'].lower() == 'none' or msg_dict['effect'].capitalize() in get_effect_names():
-                            self._effects.clear()
-                            if msg_dict['effect'].lower() == 'none':
-                                effect_class = 'Onecolor'
-                            else:
-                                effect_class = msg_dict['effect'].capitalize()
-                            journal.send(MESSAGE="Applying effect " + str(effect_class))
-                            if 'hue' in msg_dict:
-                                hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
-                            else:
-                                hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
-                                                          g=msg_dict['color']['g'] / float(255),
-                                                          b=msg_dict['color']['b'] / float(255))
-                                hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
-                            self._effects.append(construct_effect(effect_name=effect_class,
-                                                                  pixel_max=self._strip.get_size(),
-                                                                  strip=self._strip,
-                                                                  hsv=hsv,
-                                                                  sleep=global_speed))
-                            msg_dict['effect'] = 'none'
                         else:
-                            journal.send(MESSAGE="[warning] Unknown effect '" + str(msg_dict['effect']) + "' received")
+                            # do custom command stuff (if Milight Remote is used)
+                            if 'command' in msg_dict:
+                                if msg_dict['command'] == 'mode_speed_down' and global_speed < 150:
+                                    global_speed = global_speed + 10
+                                elif msg_dict['command'] == 'mode_speed_up' and global_speed > 0:
+                                    global_speed = global_speed - 10
+                                elif msg_dict['command'] == 'white_mode':
+                                    msg_dict.pop('hue', True)
+                                    msg_dict['color'] = {}
+                                    msg_dict['color']['r'] = 255
+                                    msg_dict['color']['g'] = 255
+                                    msg_dict['color']['b'] = 255
+                                restart_effect = True
+                            if 'mode' in msg_dict:
+                                if 'effect' not in last_state or last_state['effect'].lower() == 'none':
+                                    msg_dict['effect'] = 'colorwipe'
+                                else:
+                                    msg_dict['effect'] = get_effect_names()[
+                                        (get_effect_names().index(last_state['effect']) + 1) % len(get_effect_names())]
+                            # normal one-color operation
+
+                            if 'brightness' not in msg_dict:
+                                if last_state is not None and 'brightness' in last_state:
+                                    msg_dict['brightness'] = int(last_state['brightness'])
+                                else:
+                                    msg_dict['brightness'] = 128
+                            else:
+                                msg_dict['brightness'] = int(msg_dict['brightness'])
+
+                            if 'color' not in msg_dict and 'hue' not in msg_dict:
+                                if last_state is not None and ('color' in last_state or 'hue' in last_state):
+                                    if 'color' in last_state:
+                                        msg_dict['color'] = {}
+                                        msg_dict['color']['r'] = last_state['color']['r']
+                                        msg_dict['color']['g'] = last_state['color']['g']
+                                        msg_dict['color']['b'] = last_state['color']['b']
+                                    elif 'hue' in last_state:
+                                        msg_dict['hue'] = last_state['hue']
+                                else:
+                                    msg_dict['color'] = {}
+                                    msg_dict['color']['r'] = 255
+                                    msg_dict['color']['g'] = 255
+                                    msg_dict['color']['b'] = 255
+
+                            if 'transition' in msg_dict:
+                                transition = int(msg_dict['transition'])
+                            else:
+                                transition = None
+
+                            if 'effect' not in msg_dict:
+                                if last_state is not None and 'effect' in last_state:
+                                    msg_dict['effect'] = last_state['effect']
+
+                            if ('effect' not in msg_dict or msg_dict['effect'].lower() == 'none')\
+                                    and ('state' not in msg_dict or msg_dict['state'].lower() != 'off'):
+                                msg_dict['effect'] = 'none'
+
+                            if msg_dict['effect'].lower() == 'none' or msg_dict['effect'].capitalize() in get_effect_names():
+                                self._effects.clear()
+                                if msg_dict['effect'].lower() == 'none':
+                                    effect_class = 'Onecolor'
+                                else:
+                                    effect_class = msg_dict['effect'].capitalize()
+                                journal.send(MESSAGE="Applying effect " + str(effect_class))
+                                if 'hue' in msg_dict:
+                                    hsv = (int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
+                                else:
+                                    hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                              g=msg_dict['color']['g'] / float(255),
+                                                              b=msg_dict['color']['b'] / float(255))
+                                    hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
+                                self._effects.append(construct_effect(effect_name=effect_class,
+                                                                      pixel_max=self._strip.get_size(),
+                                                                      strip=self._strip,
+                                                                      hsv=hsv,
+                                                                      sleep=global_speed))
+                            else:
+                                journal.send(MESSAGE="[warning] Unknown effect '" + str(msg_dict['effect']) + "' received")
 
                         if last_state is None or last_state != msg_dict:
                             send_dict = msg_dict
@@ -154,6 +165,7 @@ class StripeLoop(Thread):
                                 send_dict.pop('hue')
                             if 'state' not in send_dict:
                                 send_dict['state'] = 'ON'
+                            journal.send(MESSAGE="Trying to publish state: " + str(send_dict))
                             self._send_queue.put(json.dumps(send_dict).encode('UTF-8'))
                             self._last_state = msg_dict
 

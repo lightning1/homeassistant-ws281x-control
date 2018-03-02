@@ -38,4 +38,9 @@ if __name__ == '__main__':
     while True:
         message = send_queue.get()
         journal.send(MESSAGE="Publishing: " + str(message))
-        client.publish("/woodie/ws281x/get", message)
+        #if 'command_topic' in message:
+        #    topic = "/homeassistant/discovery/light/atrium/config"
+        #else:
+        topic = "/woodie/ws281x/get"
+        client.publish(topic, message)
+        journal.send(MESSAGE="Publishing to " + topic + ": " + str(message))

@@ -34,6 +34,9 @@ class Strip:
         else:
             return None
 
+    def set(self, position, pixel):
+        self._pixels[position] = pixel
+
     def get_all(self):
         return list(self._pixels.values())
 
