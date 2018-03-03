@@ -12,7 +12,7 @@ class Colorshoot(Effect):
         # pixel dict
         self._pixels = []
         # time for a single fading step
-        self._fading_time = 5
+        self._fading_time = 10
         # currently fading pixel
         self._current_pixel = None
         # possible states:
@@ -20,17 +20,21 @@ class Colorshoot(Effect):
         self._state = 'begin'
         self.sleep = self._fading_time
 
+    def update(self, sleep=20, hsv=(0, 0, 0)):
+        self._original_sleep=sleep
+        Effect.update(self, sleep, hsv)
+
     def run(self, strip):
         if self._state == 'begin':
             # growing is starting
             strip.off()
-            self._pixels = range(self.pixel_min, self.pixel_max)
+            self._pixels = list(range(self.pixel_min, self.pixel_max))
             random.shuffle(self._pixels)
             self._state = 'growing'
         elif self._state == 'growing' and len(self._pixels) == 0:
             # growing is finished
             self._state = 'shrinking'
-            self._pixels = range(self.pixel_min, self.pixel_max)
+            self._pixels = list(range(self.pixel_min, self.pixel_max))
             random.shuffle(self._pixels)
         elif self._state == 'growing':
             # grow a pixel

@@ -131,7 +131,21 @@ class StripeLoop(Thread):
                                     and ('state' not in msg_dict or msg_dict['state'].lower() != 'off'):
                                 msg_dict['effect'] = 'none'
 
-                            if msg_dict['effect'].lower() == 'none' or msg_dict['effect'].capitalize() in get_effect_names():
+                            if last_state is not None and 'effect' in last_state and msg_dict['effect'].lower() == last_state['effect'] and effect_class is not 'Onecolor':
+                                # update current effect
+                                journal.send(MESSAGE="Updating effect " + str(effect_class))
+                                for effect in self._effects:
+                                    if 'hue' in msg_dict:
+                                        hsv = (
+                                        int(msg_dict['hue']) / float(360), 1, msg_dict['brightness'] / float(255))
+                                    else:
+                                        hsv = colorsys.rgb_to_hsv(r=msg_dict['color']['r'] / float(255),
+                                                                  g=msg_dict['color']['g'] / float(255),
+                                                                  b=msg_dict['color']['b'] / float(255))
+                                        hsv = (hsv[0], hsv[1], msg_dict['brightness'] / float(255))
+                                    effect.update(sleep=global_speed, hsv=hsv)
+                            elif msg_dict['effect'].lower() == 'none' or msg_dict['effect'].capitalize() in get_effect_names():
+                                # start new effect
                                 self._effects.clear()
                                 if msg_dict['effect'].lower() == 'none':
                                     effect_class = 'Onecolor'
