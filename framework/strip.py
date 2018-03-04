@@ -9,7 +9,6 @@ LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
 LED_BRIGHTNESS = 255     # Set to 0 for darkest and 255 for brightest
 LED_INVERT     = False   # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL    = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
-LED_STRIP      = ws.WS2811_STRIP_GRB   # Strip type and colour ordering
 LED_CORRECTION = 2    # Some Stripes illuminate on lower RGB values than others.
 LED_THRESHOLD = 0.02
 
@@ -21,8 +20,10 @@ class Strip:
 
         # number of LED pixels
         if 'STRIP_' + str(strip_number) + '_LED_COUNT' in os.environ:
-            self._size = int(os.environ['STRIP_' + str(strip_number) + '_LED_COUNT'])
+            self._real_size = int(os.environ['STRIP_' + str(strip_number) + '_LED_COUNT'])
+            self._size = self._real_size
         else:
+            self._real_size = 100
             self._size = 100
             journal.send(MESSAGE="[warning] No size (led count) for strip " + str(strip_number)
                                  + " was configured! Fallback to default (100).")
@@ -39,14 +40,35 @@ class Strip:
             self._dma = 10
             journal.send(MESSAGE="[warning] No DMA channel for strip " + str(strip_number)
                                  + " was configured! Fallback to default (10).")
-        self._strip = Adafruit_NeoPixel(self._size,
+        # Strip type and colour ordering
+        if 'STRIP_' + str(strip_number) + '_TYPE' in os.environ:
+            type = os.environ['STRIP_' + str(strip_number) + '_TYPE'].lower()
+            if type == "ws2811_strip_grb":
+                self._type = ws.WS2811_STRIP_GRB
+            elif type == "ws2811_strip_brg":
+                self._type = ws.WS2811_STRIP_BRG
+            else:
+                self._type = ws.WS2811_STRIP_RGB
+        else:
+            self._type = ws.WS2811_STRIP_RGB
+        # special limits: ignore pixel at the beginning of the strip
+        if 'STRIP_' + str(strip_number) + '_OFFSET_BEGIN' in os.environ:
+            self._offset_begin = int(os.environ['STRIP_' + str(strip_number) + '_OFFSET_BEGIN'])
+        else:
+            self._offset_begin = 0
+        # special limits: ignore pixel at the end of the strip
+        if 'STRIP_' + str(strip_number) + '_OFFSET_END' in os.environ:
+            self._offset_end = int(os.environ['STRIP_' + str(strip_number) + '_OFFSET_END'])
+        else:
+            self._offset_end = 0
+        self._strip = Adafruit_NeoPixel(self._real_size,
                                         self._pin,
                                         LED_FREQ_HZ,
                                         self._dma,
                                         LED_INVERT,
                                         LED_BRIGHTNESS,
                                         LED_CHANNEL,
-                                        LED_STRIP)
+                                        self._type)
         self._strip.begin()
         self._pixels = {}
         self._strip_number = strip_number
