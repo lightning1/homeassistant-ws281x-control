@@ -1,15 +1,11 @@
 from systemd import journal
 from neopixel import *
 import colorsys
+import os
 
 
 # LED strip configuration:
-#LED_COUNT      = 284     # Number of LED pixels. (for Atrium-Corners)
-LED_COUNT      = 150     # Number of LED pixels. (for balls)
-LED_PIN        = 18      # GPIO pin connected to the pixels (18 uses PWM!).
-#LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
-LED_DMA        = 10      # DMA channel to use for generating signal (try 10)
 LED_BRIGHTNESS = 255     # Set to 0 for darkest and 255 for brightest
 LED_INVERT     = False   # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL    = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
@@ -20,11 +16,40 @@ LED_THRESHOLD = 0.02
 
 class Strip:
 
-    def __init__(self):
-        self._size = LED_COUNT
-        self._strip = Adafruit_NeoPixel(LED_COUNT, 10, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL, LED_STRIP)
+    def __init__(self, strip_number):
+        # preprocess env data
+
+        # number of LED pixels
+        if 'STRIP_' + str(strip_number) + '_LED_COUNT' in os.environ:
+            self._size = int(os.environ['STRIP_' + str(strip_number) + '_LED_COUNT'])
+        else:
+            self._size = 100
+            journal.send(MESSAGE="[warning] No size (led count) for strip " + str(strip_number)
+                                 + " was configured! Fallback to default (100).")
+        # GPIO pin connected to the pixels (18 uses PWM, 10 uses SPI /dev/spidev0.0)
+        if 'STRIP_' + str(strip_number) + '_PIN' in os.environ:
+            self._pin = int(os.environ['STRIP_' + str(strip_number) + '_PIN'])
+        else:
+            journal.send(MESSAGE="[error] No control pin for strip " + str(strip_number)
+                                 + " was configured! Strip is not operational.")
+        # DMA channel to use for generating signal (try 10)
+        if 'STRIP_' + str(strip_number) + '_DMA' in os.environ:
+            self._dma = int(os.environ['STRIP_' + str(strip_number) + '_DMA'])
+        else:
+            self._dma = 10
+            journal.send(MESSAGE="[warning] No DMA channel for strip " + str(strip_number)
+                                 + " was configured! Fallback to default (10).")
+        self._strip = Adafruit_NeoPixel(self._size,
+                                        self._pin,
+                                        LED_FREQ_HZ,
+                                        self._dma,
+                                        LED_INVERT,
+                                        LED_BRIGHTNESS,
+                                        LED_CHANNEL,
+                                        LED_STRIP)
         self._strip.begin()
         self._pixels = {}
+        self._strip_number = strip_number
 
     def clear(self):
         self._pixels.clear()

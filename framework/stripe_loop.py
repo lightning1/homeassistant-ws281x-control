@@ -37,36 +37,38 @@ def get_effect_names():
 
 class StripeLoop(Thread):
 
-    def __init__(self, receive_queue, send_queue):
+    def __init__(self, receive_queue, send_queue, strip):
         Thread.__init__(self)
+        self._strip_number = strip
         self._receive_queue = receive_queue
         self._send_queue = send_queue
-        journal.send(MESSAGE="LED Thread started")
-        self._strip = Strip()
+        journal.send(MESSAGE="[" + str(self._strip_number) + "] LED Thread started")
+        self._strip = Strip(strip_number=strip)
         self._effects = []
         self._last_state = None
-        journal.send(MESSAGE="Found Effects: " + str(get_effect_names()))
+        journal.send(MESSAGE="[" + str(self._strip_number) + "] Found Effects: " + str(get_effect_names()))
         #journal.send(MESSAGE="Setting up auto discovery")
         #send_queue.put(get_discovery())
-        journal.send(MESSAGE="Setting up LED-Thread")
+        journal.send(MESSAGE="[" + str(self._strip_number) + "] Setting up LED-Thread: " + str(strip))
 
     def run(self):
         global_speed = 50
         while True:
             try:
                 try:
+                    #journal.send(MESSAGE="[" + str(self._strip_number) + "] Queue length: " + str(self._receive_queue.qsize()))
                     restart_effect = False
                     message = self._receive_queue.get(block=False)
                     if message is not None:
-                        journal.send(MESSAGE="[begin] Effects active: " + str(len(self._effects)))
-                        journal.send(MESSAGE="Process broker message")
+                        journal.send(MESSAGE="[" + str(self._strip_number) + "] [begin] Effects active: " + str(len(self._effects)))
+                        journal.send(MESSAGE="[" + str(self._strip_number) + "] Processing broker message")
                         msg_dict = json.loads(message.decode("utf-8"))
 
                         if self._last_state is not None:
                             last_state = self._last_state
-                            journal.send(MESSAGE="Applied last state: " + str(last_state))
+                            journal.send(MESSAGE="[" + str(self._strip_number) + "] Applied last state: " + str(last_state))
                         else:
-                            journal.send(MESSAGE="No last state found")
+                            journal.send(MESSAGE="[" + str(self._strip_number) + "] No last state found")
                             last_state = None
 
                         if 'state' in msg_dict and msg_dict['state'].lower() == 'off':
@@ -165,7 +167,7 @@ class StripeLoop(Thread):
                                                                       hsv=hsv,
                                                                       sleep=global_speed))
                             else:
-                                journal.send(MESSAGE="[warning] Unknown effect '" + str(msg_dict['effect']) + "' received")
+                                journal.send(MESSAGE="[" + str(self._strip_number) + "] [warning] Unknown effect '" + str(msg_dict['effect']) + "' received")
 
                         if last_state is None or last_state != msg_dict:
                             send_dict = msg_dict
@@ -179,11 +181,11 @@ class StripeLoop(Thread):
                                 send_dict.pop('hue')
                             if 'state' not in send_dict:
                                 send_dict['state'] = 'ON'
-                            journal.send(MESSAGE="Trying to publish state: " + str(send_dict))
+                            journal.send(MESSAGE="[" + str(self._strip_number) + "] Trying to publish state: " + str(send_dict))
                             self._send_queue.put(json.dumps(send_dict).encode('UTF-8'))
                             self._last_state = msg_dict
 
-                        journal.send(MESSAGE="[after] Effects active: " + str(len(self._effects)))
+                        journal.send(MESSAGE="[" + str(self._strip_number) + "] [after] Effects active: " + str(len(self._effects)))
 
                 except Empty:
                     pass
@@ -203,4 +205,4 @@ class StripeLoop(Thread):
 
                 sleep(waittime / float(1000))
             except:
-                journal.send(MESSAGE=traceback.format_exc())
+                journal.send(MESSAGE="[" + str(self._strip_number) + "] " + traceback.format_exc())
