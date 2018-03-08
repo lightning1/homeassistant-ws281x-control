@@ -61,7 +61,7 @@ light:
     name: atrium
     brightness: true
     effect: true
-    effect_list: ['none', 'colorwipe', 'turntable', 'rainbow', 'colorshoot', 'testcolor']
+    effect_list: ['none', 'colorwipe', 'turntable', 'rainbow', 'colorshoot', 'confetti', 'fire', 'sinelon', 'testcolor']
     retain: true    
 ```
 
