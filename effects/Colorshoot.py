@@ -6,7 +6,8 @@ class Colorshoot(Effect):
 
     def __init__(self, pixel_max, strip, pixel_min=0, sleep=50, hsv=(0, 0, 0)):
         Effect.__init__(self, pixel_max=pixel_max, pixel_min=pixel_min, sleep=sleep, hsv=hsv)
-        self._iterations = (pixel_max - pixel_min) * 2
+        self._iterations_max = (pixel_max - pixel_min) * 2
+        self._iterations = self._iterations = self._iterations_max
         self._original_sleep = sleep
 
         # pixel dict
@@ -25,6 +26,7 @@ class Colorshoot(Effect):
         Effect.update(self, sleep, hsv)
 
     def run(self, strip):
+        print(str(len(self._pixels)))
         if self._state == 'begin':
             # growing is starting
             strip.off()
@@ -45,7 +47,7 @@ class Colorshoot(Effect):
                 strip.add(position=self._current_pixel, pixel=(self.hsv[0], self.hsv[1], 0.001))
             else:
                 now = strip.get(self._current_pixel)
-                if now[2] > self.hsv[2]:
+                if now != None and now[2] > self.hsv[2]:
                     # pixel is finished
                     strip.set(position=self._current_pixel, pixel=self.hsv)
                     self._current_pixel = None
@@ -54,6 +56,10 @@ class Colorshoot(Effect):
                     # calculate step size
                     adding = self.hsv[2] / (self._original_sleep / float(self._fading_time))
                     strip.set(position=self._current_pixel, pixel=(self.hsv[0], self.hsv[1], now[2] + adding))
+        elif self._state == 'shrinking' and len(self._pixels) == 0:
+            # shrinking is finished
+            self._state = 'begin'
+            self._current_pixel = None
         elif self._state == 'shrinking':
             # shrink a pixel
             # is there already a pixel in move?
@@ -72,5 +78,8 @@ class Colorshoot(Effect):
                     # calculate step size
                     adding = self.hsv[2] / (self._original_sleep / float(self._fading_time))
                     strip.set(position=self._current_pixel, pixel=(self.hsv[0], self.hsv[1], now[2] - adding))
+
+        if self._iterations <= 0:
+            self._iterations = self._iterations = self._iterations_max
 
         return strip
