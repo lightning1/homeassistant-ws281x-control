@@ -7,8 +7,8 @@ class Confetti(Effect):
     def __init__(self, pixel_max, strip, pixel_min=0, sleep=10, hsv=(0, 0, 0)):
         Effect.__init__(self, pixel_max=pixel_max, pixel_min=pixel_min, sleep=sleep, hsv=hsv)
         
-        self._newColorSpeed = 5
-        self._newPositionSpeed = 2
+        self._newColorSpeed = 10
+        self._newPositionSpeed = 3
 
         self._newColorTimer = 0
         self._newPositionTimer = 0
@@ -38,10 +38,12 @@ class Confetti(Effect):
         if self._newPositionTimer < 0:
             self._newPositionTimer = self._newPositionSpeed
             newDot = random.randint(0, self.pixel_max - self.pixel_min)
-            newColor = self._currentColor + random.uniform(0.0, 0.2)
+            newColor = self._currentColor + random.uniform(-0.15, 0.15)
             if newColor >= 1:
                 newColor -= 1.0
-            strip.set(position=newDot, pixel = (newColor, 0.78, self.hsv[2]))
+            elif newColor < 0:
+                newColor += 1.0
+            strip.set(position=newDot, pixel = (newColor, self.hsv[1], self.hsv[2]))
         else:
             self._newPositionTimer -= 1
 
